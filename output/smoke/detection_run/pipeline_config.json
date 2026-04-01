@@ -1,0 +1,72 @@
+{
+  "project_name": "Prompt2Model",
+  "prompt": "Detect squares and circles in low light images and prioritize speed.",
+  "task": "detection",
+  "labels": [
+    {
+      "name": "squares",
+      "synonyms": []
+    },
+    {
+      "name": "circles",
+      "synonyms": []
+    }
+  ],
+  "constraints": {
+    "priority": "speed",
+    "speed_accuracy_tradeoff": 0.2,
+    "target_latency_ms": null,
+    "max_parameters_millions": null,
+    "budget_minutes": 15
+  },
+  "data_context": {
+    "environment_tags": [
+      "low_light"
+    ],
+    "notes": [],
+    "deployment_target": "host"
+  },
+  "dataset": {
+    "root": "output/smoke/detection_data",
+    "format": "coco",
+    "annotation_path": "output/smoke/detection_data/annotations.json",
+    "image_size": 320,
+    "val_split": 0.2,
+    "test_split": 0.1,
+    "seed": 42
+  },
+  "training": {
+    "batch_size": 2,
+    "epochs": 1,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "num_workers": 0,
+    "pretrained": false,
+    "device": "cpu",
+    "max_steps_per_epoch": 2
+  },
+  "export": {
+    "output_dir": "output/smoke/detection_run",
+    "export_onnx": true,
+    "onnx_opset": 17,
+    "topk_detections": 20
+  },
+  "model_name": "ssdlite320_mobilenet_v3_large",
+  "augmentation_tags": [
+    "low_light"
+  ],
+  "resolved_labels": [
+    {
+      "requested_label": "squares",
+      "dataset_label": "square",
+      "score": 0.9230769230769231,
+      "method": "lexical"
+    },
+    {
+      "requested_label": "circles",
+      "dataset_label": "circle",
+      "score": 0.9230769230769231,
+      "method": "lexical"
+    }
+  ]
+}

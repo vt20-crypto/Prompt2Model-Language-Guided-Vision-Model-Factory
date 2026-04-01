@@ -1,0 +1,155 @@
+from __future__ import annotations
+
+import re
+from collections.abc import Sequence
+
+from prompt2model.config import (
+    DataContext,
+    DatasetConfig,
+    ModelConstraints,
+    PipelineConfig,
+    PriorityPreset,
+    RequestedLabel,
+    TaskType,
+    TrainingConfig,
+)
+
+
+ENVIRONMENT_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "low_light": ("low light", "dark", "night", "nighttime", "dim"),
+    "rain": ("rain", "rainy", "wet"),
+    "fog": ("fog", "foggy", "mist", "misty"),
+    "motion_blur": ("motion blur", "blurry", "blur", "fast-moving"),
+    "glare": ("glare", "sun glare", "backlit"),
+    "occlusion": ("occlusion", "occluded", "crowd"),
+}
+
+
+def infer_task_from_prompt(prompt: str, task_hint: TaskType | None = None) -> TaskType:
+    if task_hint is not None:
+        return task_hint
+    normalized = prompt.lower()
+    if any(keyword in normalized for keyword in ("detect", "detection", "localize", "bounding box", "bbox")):
+        return TaskType.DETECTION
+    return TaskType.CLASSIFICATION
+
+
+def _extract_priority(prompt: str) -> PriorityPreset:
+    normalized = prompt.lower()
+    speed_terms = ("prioritize speed", "real-time", "fast", "latency", "lightweight", "edge")
+    accuracy_terms = ("prioritize accuracy", "high accuracy", "best accuracy", "maximize accuracy")
+    if any(term in normalized for term in accuracy_terms):
+        return PriorityPreset.ACCURACY
+    if any(term in normalized for term in speed_terms):
+        return PriorityPreset.SPEED
+    return PriorityPreset.BALANCED
+
+
+def _extract_speed_accuracy_tradeoff(priority: PriorityPreset) -> float:
+    if priority == PriorityPreset.SPEED:
+        return 0.2
+    if priority == PriorityPreset.ACCURACY:
+        return 0.8
+    return 0.5
+
+
+def _extract_latency_ms(prompt: str) -> int | None:
+    match = re.search(r"(\d+)\s*ms", prompt.lower())
+    return int(match.group(1)) if match else None
+
+
+def _extract_budget_minutes(prompt: str) -> int:
+    match = re.search(r"(\d+)\s*(minute|minutes|min|hour|hours|hr|hrs)", prompt.lower())
+    if not match:
+        return 15
+    value = int(match.group(1))
+    unit = match.group(2)
+    return value * 60 if unit.startswith("h") else value
+
+
+def _extract_environment_tags(prompt: str) -> list[str]:
+    normalized = prompt.lower()
+    tags = [tag for tag, keywords in ENVIRONMENT_KEYWORDS.items() if any(keyword in normalized for keyword in keywords)]
+    return sorted(set(tags))
+
+
+def _split_label_phrase(raw: str) -> list[str]:
+    cleaned = re.sub(r"\b(in|under|with|while|for|on|during|prioritize|and ensure)\b.*$", "", raw, flags=re.IGNORECASE)
+    cleaned = cleaned.replace("/", ",")
+    parts = re.split(r",| and |\bor\b", cleaned)
+    labels = []
+    for part in parts:
+        label = part.strip(" .:-\"'")
+        if label:
+            labels.append(label)
+    return labels
+
+
+def _extract_labels_from_quotes(prompt: str) -> list[str]:
+    return [item.strip() for item in re.findall(r"\"([^\"]+)\"", prompt) if item.strip()]
+
+
+def extract_requested_labels(prompt: str, task: TaskType) -> list[RequestedLabel]:
+    normalized = prompt.strip()
+    patterns: Sequence[str]
+    if task == TaskType.DETECTION:
+        patterns = (
+            r"(?:detect|find|localize)\s+(.+?)(?:\.|,|;|$)",
+            r"object detection\s+(?:for\s+)?(.+?)(?:\.|,|;|$)",
+        )
+    else:
+        patterns = (
+            r"(?:classify|recognize|categorize)\s+(.+?)(?:\.|,|;|$)",
+            r"classification\s+(?:of\s+)?(.+?)(?:\.|,|;|$)",
+        )
+
+    extracted: list[str] = []
+    for pattern in patterns:
+        match = re.search(pattern, normalized, flags=re.IGNORECASE)
+        if match:
+            extracted.extend(_split_label_phrase(match.group(1)))
+            break
+
+    if not extracted:
+        extracted = _extract_labels_from_quotes(normalized)
+    if not extracted:
+        extracted = ["target"]
+
+    unique = []
+    seen = set()
+    for label in extracted:
+        normalized_label = label.lower()
+        if normalized_label not in seen:
+            seen.add(normalized_label)
+            unique.append(RequestedLabel(name=label))
+    return unique
+
+
+def parse_prompt(
+    prompt: str,
+    dataset: DatasetConfig,
+    task_hint: TaskType | None = None,
+    training_overrides: TrainingConfig | None = None,
+) -> PipelineConfig:
+    task = infer_task_from_prompt(prompt, task_hint)
+    priority = _extract_priority(prompt)
+    constraints = ModelConstraints(
+        priority=priority,
+        speed_accuracy_tradeoff=_extract_speed_accuracy_tradeoff(priority),
+        target_latency_ms=_extract_latency_ms(prompt),
+        budget_minutes=_extract_budget_minutes(prompt),
+    )
+    data_context = DataContext(environment_tags=_extract_environment_tags(prompt))
+    labels = extract_requested_labels(prompt, task)
+    training = training_overrides or TrainingConfig()
+    return PipelineConfig(
+        prompt=prompt,
+        task=task,
+        labels=labels,
+        constraints=constraints,
+        data_context=data_context,
+        dataset=dataset,
+        training=training,
+        augmentation_tags=data_context.environment_tags,
+    )
+

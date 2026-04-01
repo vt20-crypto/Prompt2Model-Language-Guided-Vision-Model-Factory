@@ -1,0 +1,62 @@
+{
+  "project_name": "Prompt2Model",
+  "prompt": "Classify red square, blue circle, and green triangle images under low light and prioritize speed.",
+  "task": "classification",
+  "labels": [
+    {
+      "name": "red square",
+      "synonyms": []
+    }
+  ],
+  "constraints": {
+    "priority": "speed",
+    "speed_accuracy_tradeoff": 0.2,
+    "target_latency_ms": null,
+    "max_parameters_millions": null,
+    "budget_minutes": 15
+  },
+  "data_context": {
+    "environment_tags": [
+      "low_light"
+    ],
+    "notes": [],
+    "deployment_target": "host"
+  },
+  "dataset": {
+    "root": "output/smoke/classification_data",
+    "format": "imagefolder",
+    "annotation_path": null,
+    "image_size": 96,
+    "val_split": 0.2,
+    "test_split": 0.1,
+    "seed": 42
+  },
+  "training": {
+    "batch_size": 8,
+    "epochs": 2,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "num_workers": 0,
+    "pretrained": false,
+    "device": null,
+    "max_steps_per_epoch": 4
+  },
+  "export": {
+    "output_dir": "output/smoke/classification_run",
+    "export_onnx": true,
+    "onnx_opset": 17,
+    "topk_detections": 20
+  },
+  "model_name": "mobilenet_v3_small",
+  "augmentation_tags": [
+    "low_light"
+  ],
+  "resolved_labels": [
+    {
+      "requested_label": "red square",
+      "dataset_label": "red_square",
+      "score": 0.9,
+      "method": "lexical"
+    }
+  ]
+}
