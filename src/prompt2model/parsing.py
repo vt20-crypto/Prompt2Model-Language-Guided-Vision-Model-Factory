@@ -75,6 +75,7 @@ def _extract_environment_tags(prompt: str) -> list[str]:
 
 def _split_label_phrase(raw: str) -> list[str]:
     cleaned = re.sub(r"\b(in|under|with|while|for|on|during|prioritize|and ensure)\b.*$", "", raw, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(images?|objects?|scenes?|footage|photos?)\b", "", cleaned, flags=re.IGNORECASE)
     cleaned = cleaned.replace("/", ",")
     parts = re.split(r",| and |\bor\b", cleaned)
     labels = []
@@ -94,13 +95,13 @@ def extract_requested_labels(prompt: str, task: TaskType) -> list[RequestedLabel
     patterns: Sequence[str]
     if task == TaskType.DETECTION:
         patterns = (
-            r"(?:detect|find|localize)\s+(.+?)(?:\.|,|;|$)",
-            r"object detection\s+(?:for\s+)?(.+?)(?:\.|,|;|$)",
+            r"(?:detect|find|localize)\s+(.+?)(?:\.|;|$)",
+            r"object detection\s+(?:for\s+)?(.+?)(?:\.|;|$)",
         )
     else:
         patterns = (
-            r"(?:classify|recognize|categorize)\s+(.+?)(?:\.|,|;|$)",
-            r"classification\s+(?:of\s+)?(.+?)(?:\.|,|;|$)",
+            r"(?:classify|recognize|categorize)\s+(.+?)(?:\.|;|$)",
+            r"classification\s+(?:of\s+)?(.+?)(?:\.|;|$)",
         )
 
     extracted: list[str] = []
@@ -152,4 +153,3 @@ def parse_prompt(
         training=training,
         augmentation_tags=data_context.environment_tags,
     )
-
