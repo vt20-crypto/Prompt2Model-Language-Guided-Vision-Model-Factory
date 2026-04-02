@@ -16,10 +16,10 @@ Detect squares and circles in low light images and prioritize speed.
 ## Metrics
 ```json
 {
-  "map@0.5": 0.07142857142857142,
-  "map@[0.5:0.95]": 0.02142857142857143,
-  "latency_ms": 21.50512479711324,
-  "fps": 46.50054391380402,
+  "map@0.5": 0.020833333333333332,
+  "map@[0.5:0.95]": 0.0044956140350877185,
+  "latency_ms": 66.26199958845973,
+  "fps": 15.091606142446707,
   "parameter_count": 2220380.0,
   "parameter_count_millions": 2.22038
 }
@@ -30,8 +30,8 @@ Detect squares and circles in low light images and prioritize speed.
 [
   {
     "epoch": 1.0,
-    "train_loss": 11.06933307647705,
-    "val_loss": 9.328075408935547
+    "train_loss": 10.901141166687012,
+    "val_loss": 8.816788673400879
   }
 ]
 ```

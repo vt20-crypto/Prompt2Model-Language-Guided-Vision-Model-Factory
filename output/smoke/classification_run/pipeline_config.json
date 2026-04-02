@@ -6,6 +6,14 @@
     {
       "name": "red square",
       "synonyms": []
+    },
+    {
+      "name": "blue circle",
+      "synonyms": []
+    },
+    {
+      "name": "green triangle",
+      "synonyms": []
     }
   ],
   "constraints": {
@@ -56,6 +64,18 @@
       "requested_label": "red square",
       "dataset_label": "red_square",
       "score": 0.9,
+      "method": "lexical"
+    },
+    {
+      "requested_label": "blue circle",
+      "dataset_label": "blue_circle",
+      "score": 0.9090909090909091,
+      "method": "lexical"
+    },
+    {
+      "requested_label": "green triangle",
+      "dataset_label": "green_triangle",
+      "score": 0.9285714285714286,
       "method": "lexical"
     }
   ]
