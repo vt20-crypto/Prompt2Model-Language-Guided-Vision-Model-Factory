@@ -1,0 +1,47 @@
+{
+  "dataset": "beans",
+  "class_names": [
+    "angular_leaf_spot",
+    "bean_rust",
+    "healthy"
+  ],
+  "device": "mps",
+  "train_images": 1034,
+  "val_images": 133,
+  "test_images": 128,
+  "fixed_recipe": {
+    "clean_accuracy": 0.9453125,
+    "low_light_accuracy": 0.4453125
+  },
+  "language_guided": {
+    "clean_accuracy": 0.90625,
+    "low_light_accuracy": 0.625
+  },
+  "low_light_gain_pp": 17.96875,
+  "examples": [
+    {
+      "image_path": "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/data/report_eval/beans_benchmark/examples/beans_006.png",
+      "target": "angular_leaf_spot",
+      "baseline": "bean_rust",
+      "guided": "angular_leaf_spot"
+    },
+    {
+      "image_path": "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/data/report_eval/beans_benchmark/examples/beans_033.png",
+      "target": "angular_leaf_spot",
+      "baseline": "bean_rust",
+      "guided": "angular_leaf_spot"
+    },
+    {
+      "image_path": "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/data/report_eval/beans_benchmark/examples/beans_034.png",
+      "target": "angular_leaf_spot",
+      "baseline": "healthy",
+      "guided": "angular_leaf_spot"
+    },
+    {
+      "image_path": "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/data/report_eval/beans_benchmark/examples/beans_045.png",
+      "target": "bean_rust",
+      "baseline": "angular_leaf_spot",
+      "guided": "bean_rust"
+    }
+  ]
+}
