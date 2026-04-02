@@ -1,0 +1,114 @@
+{
+  "parser": {
+    "num_prompts": 12,
+    "task_accuracy": 0.9166666666666666,
+    "priority_accuracy": 1.0,
+    "environment_accuracy": 1.0,
+    "label_accuracy": 0.9166666666666666,
+    "examples": [
+      {
+        "prompt": "Detect helmets and hard hats in low light CCTV footage and prioritize speed.",
+        "task": "detection",
+        "labels": [
+          "helmets",
+          "hard hats"
+        ],
+        "augmentations": [
+          "low_light"
+        ],
+        "model": "ssdlite320_mobilenet_v3_large"
+      },
+      {
+        "prompt": "Classify apples, bananas, and oranges for retail shelf photos and prioritize accuracy.",
+        "task": "classification",
+        "labels": [
+          "apples",
+          "bananas",
+          "oranges"
+        ],
+        "augmentations": [],
+        "model": "efficientnet_b0"
+      },
+      {
+        "prompt": "Detect cars and buses in rainy highway scenes under 40 ms latency.",
+        "task": "detection",
+        "labels": [
+          "cars",
+          "buses"
+        ],
+        "augmentations": [
+          "rain"
+        ],
+        "model": "ssdlite320_mobilenet_v3_large"
+      }
+    ]
+  },
+  "label_resolution": {
+    "num_cases": 8,
+    "accuracy": 1.0
+  },
+  "models": {
+    "classification": {
+      "latency_ms": 10.202641598880291,
+      "fps": 98.01383203637644,
+      "parameter_count": 1520931.0,
+      "parameter_count_millions": 1.520931
+    },
+    "detection": {
+      "latency_ms": 28.732758609112352,
+      "fps": 34.80348036205819,
+      "parameter_count": 2220380.0,
+      "parameter_count_millions": 2.22038
+    },
+    "export_success": 1.0,
+    "classification_onnx_mb": 5.81,
+    "detection_onnx_mb": 8.65
+  },
+  "real_benchmark": {
+    "dataset": "beans",
+    "class_names": [
+      "angular_leaf_spot",
+      "bean_rust",
+      "healthy"
+    ],
+    "device": "mps",
+    "train_images": 1034,
+    "val_images": 133,
+    "test_images": 128,
+    "fixed_recipe": {
+      "clean_accuracy": 0.9453125,
+      "low_light_accuracy": 0.4453125
+    },
+    "language_guided": {
+      "clean_accuracy": 0.90625,
+      "low_light_accuracy": 0.625
+    },
+    "low_light_gain_pp": 17.96875,
+    "examples": [
+      {
+        "image_path": "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/data/report_eval/beans_benchmark/examples/beans_006.png",
+        "target": "angular_leaf_spot",
+        "baseline": "bean_rust",
+        "guided": "angular_leaf_spot"
+      },
+      {
+        "image_path": "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/data/report_eval/beans_benchmark/examples/beans_033.png",
+        "target": "angular_leaf_spot",
+        "baseline": "bean_rust",
+        "guided": "angular_leaf_spot"
+      },
+      {
+        "image_path": "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/data/report_eval/beans_benchmark/examples/beans_034.png",
+        "target": "angular_leaf_spot",
+        "baseline": "healthy",
+        "guided": "angular_leaf_spot"
+      },
+      {
+        "image_path": "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/data/report_eval/beans_benchmark/examples/beans_045.png",
+        "target": "bean_rust",
+        "baseline": "angular_leaf_spot",
+        "guided": "bean_rust"
+      }
+    ]
+  }
+}
