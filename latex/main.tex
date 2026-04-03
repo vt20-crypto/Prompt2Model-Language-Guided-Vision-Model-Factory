@@ -30,41 +30,46 @@ Madhuvani Thatiparti (mt180)
 \maketitle
 
 \begin{abstract}
-Prompt2Model takes a free-form task request and turns it into a runnable vision pipeline. The current prototype covers typed prompt parsing, label resolution, augmentation selection, lightweight model choice for classification and COCO-style detection, smoke-test training, and ONNX export. On a 12-prompt rubric, task extraction and label extraction are 91.7\% exact-match, while priority and environment tags are 100\%; the label resolver is 100\% on an 8-case synonym check. For a real-data benchmark, we downloaded the Beans leaf-disease dataset and trained MobileNetV3-Small with and without the prompt-triggered low-light recipe. On a low-light corrupted test split, the guided recipe improves accuracy from 44.5\% to 62.5\%, while clean accuracy changes from 94.5\% to 90.6\%. Both smoke pipelines also export successfully to ONNX.
+Prompt2Model turns a free-form request into a runnable vision pipeline. The current prototype covers typed prompt parsing, label resolution, augmentation selection, lightweight model choice for classification and COCO-style detection, smoke-test training, and ONNX export. On a 12-prompt rubric, task and label extraction are 91.7\% exact-match, while priority and environment tags are 100\%; the label resolver is 100\% on an 8-case synonym check. For real-data evaluation, we downloaded Beans and CIFAR-10. On Beans, the prompt-guided low-light recipe improves corrupted-test accuracy from 44.5\% to 62.5\%; on CIFAR-10, the prompt-guided motion-blur recipe improves blur accuracy from 38.7\% to 66.5\%. A Beans ablation also shows that pretrained initialization matters and that EfficientNet-B0 outperforms MobileNetV3-Small under the same recipe.
 \end{abstract}
 
 \section{Introduction}
-Building a vision model still involves a long list of small engineering choices: task type, class names, data augmentation, model family, and export settings. Prompt2Model uses the prompt as the interface for those choices. In the current system, phrases such as ``prioritize speed'' or ``low light'' are translated into an explicit training recipe.
+Building a vision model still involves many small engineering choices: task type, class names, augmentation, backbone, and export settings. Prompt2Model uses the prompt as the interface for those choices. In the current system, phrases such as ``prioritize speed'', ``low light'', or ``motion blur'' are translated into an explicit training recipe.
 
-This report captures the week-4 integrated prototype plus one real-data extension. The aim is modest: show that the pieces work together end to end, and back that claim with more than toy smoke outputs.
+This report captures the week-4 integrated prototype plus real-data extensions. The aim is to show that the pieces work together end to end, with evidence beyond toy smoke outputs.
 
 \section{Method}
-The pipeline has three pieces. \textbf{Parsing:} a typed schema stores task type, requested labels, deployment constraints, and environment tags, and a deterministic parser fills that schema from prompt text. \textbf{Label grounding and model choice:} requested labels are matched to dataset classes with a lexical resolver today, while the CLIP path is already wired for later use~\cite{radford2021clip}; the parsed priority signal selects lightweight backbones, currently MobileNetV3 for classification~\cite{howard2019searching} and SSDLite320-MobileNetV3 for detection~\cite{liu2016ssd,howard2019searching}. \textbf{Training and export:} the system loads ImageFolder-like classification data or COCO-style detection annotations, trains a baseline model, evaluates it, and exports an ONNX artifact with embedded metadata. In the current implementation, ``prioritize speed'' selects MobileNetV3-Small for classification, and ``low light'' enables brightness/contrast and blur augmentations.
+The pipeline has three pieces. \textbf{Parsing:} a typed schema stores task type, requested labels, deployment constraints, and environment tags, and a deterministic parser fills that schema from prompt text. \textbf{Label grounding and model choice:} requested labels are matched to dataset classes with a lexical resolver today, while the CLIP path is already wired for later use~\cite{radford2021clip}; the parsed priority signal selects lightweight backbones, currently MobileNetV3 for classification~\cite{howard2019searching} and SSDLite320-MobileNetV3 for detection~\cite{liu2016ssd,howard2019searching}. \textbf{Training and export:} the system loads ImageFolder-like classification data or COCO-style detection annotations, trains a model, evaluates it, and exports an ONNX artifact with embedded metadata. In the current implementation, ``prioritize speed'' selects MobileNetV3-Small, ``low light'' enables brightness/contrast plus blur, and ``motion blur'' enables blur augmentation during training.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/progress_results.pdf}
-\caption{Actual progress results from the implemented prototype. Left: Beans low-light failure cases corrected by the language-guided recipe. Right: accuracy on the clean and low-light corrupted test splits.}
+\caption{Beans robustness results from the implemented prototype. Left: fixed-recipe failures corrected by the guided recipe. Right: clean and corrupted test accuracy.}
 \label{fig:qualitative}
 \end{figure*}
 
 \section{Experimental Settings}
-To verify integration, we combine repository-level checks with one real-data benchmark. The four validation tracks are: a 12-prompt parsing rubric, an 8-case synonym benchmark for label resolution, a low-light robustness study on the Beans leaf-disease dataset, and smoke pipelines for classification and COCO-style detection export. For the real benchmark, we downloaded the Hugging Face Beans dataset and used its official train/validation/test splits (1034/133/128 images). We initialized MobileNetV3-Small from the torchvision ImageNet checkpoint and trained two runs with identical splits and backbone: a fixed recipe and a prompt-guided low-light recipe. To stress robustness, we created a low-light test version by applying deterministic brightness, contrast, blur, and sensor-noise corruption to the test images. Training ran on Apple Silicon MPS; latency and ONNX measurements were collected separately on CPU.
+To verify integration, we combine repository-level checks with two real-data benchmarks. The validation tracks are a 12-prompt parsing rubric, an 8-case synonym benchmark, a Beans low-light study, a CIFAR-10 motion-blur study, and smoke pipelines for classification and COCO-style detection export. For Beans, we used the official Hugging Face train/validation/test splits (1034/133/128 images). For CIFAR-10, we used a balanced 10k-train/2k-val subset from the standard training split plus the full official test set. Both studies use ImageNet-initialized MobileNetV3-Small and compare a fixed recipe against a prompt-guided corruption-specific recipe. Training ran on Apple Silicon MPS; latency and ONNX measurements were collected on CPU.
 
 \section{Preliminary Results}
-Figure~\ref{fig:qualitative} shows the real-data low-light benchmark. The main result is a clear tradeoff: the language-guided augmentation policy improves low-light accuracy on Beans from 44.5\% to 62.5\%, a gain of 18.0 percentage points, while clean accuracy changes from 94.5\% to 90.6\%. The only difference between the two runs is the prompt-activated augmentation policy; the backbone, initialization, and dataset splits are unchanged. Quantitative progress is summarized in Table~\ref{tab:progress_results}. The language front-end is also stable enough to drive the rest of the stack: task and label-list parsing both reach 91.7\%, while priority extraction and environment-tag extraction are perfect on the rubric.
+Figure~\ref{fig:qualitative} shows the Beans benchmark. The main result is a clear robustness tradeoff: the prompt-guided low-light recipe improves corrupted-test accuracy from 44.5\% to 62.5\%, a gain of 18.0 points, while clean accuracy changes from 94.5\% to 90.6\%. The second benchmark shows the same pattern on CIFAR-10: the motion-blur recipe improves blur accuracy from 38.7\% to 66.5\% with almost no clean penalty (78.5\% to 79.0\%). Table~\ref{tab:progress_results} summarizes both benchmarks.
 
 \input{tables/progress_results}
+\input{tables/ablation_results}
 
-The deployment path is also functioning. Both smoke pipelines produced ONNX artifacts, yielding 100\% export success at this checkpoint. The resulting ONNX files are compact enough for an edge-oriented MVP (5.81\,MB for classification and 8.65\,MB for detection). CPU latency benchmarks are 10.2\,ms for the classification backbone and 28.7\,ms for the detection backbone. The main missing result is broader \emph{real-data model quality}: we now have one real classification benchmark, but we still lack real detection experiments, larger cross-dataset studies, and budget-constrained HPO.
+Table~\ref{tab:ablation_results} shows the Beans ablation. Pretrained initialization matters: the guided MobileNetV3-Small model trained from scratch collapses to 33.6\% on both clean and low-light evaluation. Backbone choice also matters after parsing: guided EfficientNet-B0 reaches 95.3\% clean and 66.4\% low-light accuracy, improving on guided MobileNetV3-Small. The parser and deployment stack are stable enough for these experiments: task and label extraction are both 91.7\% exact-match, label resolution is 100\% on 8 curated synonym cases, both smoke pipelines export to ONNX successfully, and CPU latency is 10.2\,ms for MobileNetV3-Small and 28.7\,ms for SSDLite320.
 
-\section{Discussion and Next Steps}
-The report now shows that the project is beyond the proposal stage: the codebase runs end to end, and at least one result comes from real images rather than synthetic data. The limitations are still clear. Two parser cases miss exact task or label extraction, the current label benchmark uses lexical fallback rather than the full CLIP path, the real-data evaluation covers one classification dataset, and the detection path is still validated mostly through smoke tests. The next stage is to activate the full CLIP path, add budget-aware search and early stopping, run real COCO-style detection experiments, and compare against stronger fixed baselines.
+\section{Pipeline Architecture}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.88\columnwidth]{figures/pipeline_architecture.pdf}
+\caption{Implemented Prompt2Model handoff chain.}
+\label{fig:architecture}
+\end{figure}
+Figure~\ref{fig:architecture} makes the system boundary explicit. The key claim is not only that prompts select augmentations, but that they control a full path from typed configuration to exported artifact. In the repo, those handoffs appear as \texttt{pipeline\_config.json}, \texttt{best\_model.pt}, \texttt{evaluation\_report.md}, and \texttt{model.onnx}. The main missing piece is still real detection evaluation.
 
-\section{Ethical and Societal Considerations}
-Language-guided model generation creates failure modes beyond ordinary vision training. An incorrect parse can silently choose the wrong task, labels, or augmentation policy; a poor label match can hide dataset-ontology mismatches behind superficially plausible outputs. We therefore treat typed validation, explicit reporting, and failure-case logging as core parts of the system. As the project moves to real datasets, we will also inspect class imbalance, ambiguous prompts, and biased label requests.
-
-{\footnotesize
+{\tiny
+\setlength{\bibsep}{0pt}
 \bibliographystyle{ieeenat_fullname}
 \bibliography{main}
 }
