@@ -1,22 +1,16 @@
 \begin{table}[t]
 \centering
-\caption{Current progress results. The main benchmark uses the real Beans leaf-disease dataset plus a low-light corruption protocol; parser and deployment metrics come from the implemented repository.}
+\caption{Real benchmark summary across two datasets. Both comparisons keep the backbone fixed and change only the prompt-activated augmentation recipe.}
 \label{tab:progress_results}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcc}
+\begin{tabular}{llccc}
 \toprule
-\textbf{Metric} & \textbf{Value} & \textbf{Notes} \\
+\textbf{Dataset} & \textbf{Split} & \textbf{Fixed} & \textbf{Guided} & \textbf{$\Delta$} \\
 \midrule
-Beans clean acc. (fixed) & 94.5\% & MobileNetV3-Small, official test \\
-Beans clean acc. (guided) & 90.6\% & low-light aug. train recipe \\
-Beans low-light acc. (fixed) & 44.5\% & corrupted test split \\
-Beans low-light acc. (guided) & 62.5\% & prompt-activated aug. \\
-Low-light gain & +18.0 pp & same backbone, same data \\
-Task / label parsing & 91.7 / 91.7\% & 12 prompt rubric \\
-Label resolution accuracy & 100.0\% & 8 synonym pairs \\
-Classification latency & 10.2 ms & MobileNetV3-Small, CPU \\
-Detection latency & 28.7 ms & SSDLite320, CPU \\
-ONNX export success & 100\% & 2/2 smoke runs \\
+Beans & clean & 94.5\% & 90.6\% & -3.9 \\
+Beans & low-light & 44.5\% & 62.5\% & +18.0 \\
+CIFAR-10 & clean & 78.5\% & 79.0\% & +0.5 \\
+CIFAR-10 & blur & 38.7\% & 66.5\% & +27.7 \\
 \bottomrule
 \end{tabular}%
 }

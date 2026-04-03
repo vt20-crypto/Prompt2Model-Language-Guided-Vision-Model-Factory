@@ -1,0 +1,34 @@
+{
+  "dataset": "beans",
+  "device": "mps",
+  "results": [
+    {
+      "name": "fixed_mobilenet_pretrained",
+      "model_name": "mobilenet_v3_small",
+      "pretrained": true,
+      "clean_accuracy": 0.9453125,
+      "low_light_accuracy": 0.4453125
+    },
+    {
+      "name": "guided_mobilenet_pretrained",
+      "model_name": "mobilenet_v3_small",
+      "pretrained": true,
+      "clean_accuracy": 0.90625,
+      "low_light_accuracy": 0.625
+    },
+    {
+      "name": "guided_mobilenet_scratch",
+      "model_name": "mobilenet_v3_small",
+      "pretrained": false,
+      "clean_accuracy": 0.3359375,
+      "low_light_accuracy": 0.3359375
+    },
+    {
+      "name": "guided_efficientnet_pretrained",
+      "model_name": "efficientnet_b0",
+      "pretrained": true,
+      "clean_accuracy": 0.953125,
+      "low_light_accuracy": 0.6640625
+    }
+  ]
+}

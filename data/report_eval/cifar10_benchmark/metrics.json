@@ -1,0 +1,18 @@
+{
+  "dataset": "cifar10",
+  "variant": "balanced official-train subset, full official test",
+  "train_images": 10000,
+  "val_images": 2000,
+  "test_images": 10000,
+  "device": "mps",
+  "fixed_recipe": {
+    "clean_accuracy": 0.7851,
+    "blur_accuracy": 0.3873
+  },
+  "language_guided": {
+    "clean_accuracy": 0.7899,
+    "blur_accuracy": 0.6645
+  },
+  "blur_gain_pp": 27.72,
+  "classification_latency_ms_cpu": 15.832049807067962
+}

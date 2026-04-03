@@ -49,14 +49,14 @@
   },
   "models": {
     "classification": {
-      "latency_ms": 10.202641598880291,
-      "fps": 98.01383203637644,
+      "latency_ms": 8.543349988758564,
+      "fps": 117.05010345073201,
       "parameter_count": 1520931.0,
       "parameter_count_millions": 1.520931
     },
     "detection": {
-      "latency_ms": 28.732758609112352,
-      "fps": 34.80348036205819,
+      "latency_ms": 23.90680001117289,
+      "fps": 41.829102997166,
       "parameter_count": 2220380.0,
       "parameter_count_millions": 2.22038
     },
@@ -108,6 +108,58 @@
         "target": "bean_rust",
         "baseline": "angular_leaf_spot",
         "guided": "bean_rust"
+      }
+    ]
+  },
+  "second_benchmark": {
+    "dataset": "cifar10",
+    "variant": "balanced official-train subset, full official test",
+    "train_images": 10000,
+    "val_images": 2000,
+    "test_images": 10000,
+    "device": "mps",
+    "fixed_recipe": {
+      "clean_accuracy": 0.7851,
+      "blur_accuracy": 0.3873
+    },
+    "language_guided": {
+      "clean_accuracy": 0.7899,
+      "blur_accuracy": 0.6645
+    },
+    "blur_gain_pp": 27.72,
+    "classification_latency_ms_cpu": 15.832049807067962
+  },
+  "ablation": {
+    "dataset": "beans",
+    "device": "mps",
+    "results": [
+      {
+        "name": "fixed_mobilenet_pretrained",
+        "model_name": "mobilenet_v3_small",
+        "pretrained": true,
+        "clean_accuracy": 0.9453125,
+        "low_light_accuracy": 0.4453125
+      },
+      {
+        "name": "guided_mobilenet_pretrained",
+        "model_name": "mobilenet_v3_small",
+        "pretrained": true,
+        "clean_accuracy": 0.90625,
+        "low_light_accuracy": 0.625
+      },
+      {
+        "name": "guided_mobilenet_scratch",
+        "model_name": "mobilenet_v3_small",
+        "pretrained": false,
+        "clean_accuracy": 0.3359375,
+        "low_light_accuracy": 0.3359375
+      },
+      {
+        "name": "guided_efficientnet_pretrained",
+        "model_name": "efficientnet_b0",
+        "pretrained": true,
+        "clean_accuracy": 0.953125,
+        "low_light_accuracy": 0.6640625
       }
     ]
   }

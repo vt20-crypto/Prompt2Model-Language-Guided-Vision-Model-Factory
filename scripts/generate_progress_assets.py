@@ -25,9 +25,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LATEX_FIGURES = REPO_ROOT / "latex" / "figures"
 LATEX_TABLES = REPO_ROOT / "latex" / "tables"
 DATA_DIR = REPO_ROOT / "data" / "report_eval"
-TRAINING_ARTIFACTS = DATA_DIR / "training_runs"
-
-
 @dataclass(frozen=True)
 class PromptRubric:
     prompt: str
@@ -414,37 +411,89 @@ def load_beans_benchmark() -> dict[str, object]:
     return json.loads(metrics_path.read_text())
 
 
-def write_metrics_table(metrics: dict[str, object]) -> None:
-    parser = metrics["parser"]
-    resolver = metrics["label_resolution"]
-    models = metrics["models"]
-    real_benchmark = metrics["real_benchmark"]
+def load_cifar_benchmark() -> dict[str, object]:
+    metrics_path = DATA_DIR / "cifar10_benchmark" / "metrics.json"
+    if not metrics_path.exists():
+        raise FileNotFoundError(
+            f"missing second real-data benchmark at {metrics_path}; run scripts/run_cifar10_real_benchmark.py first"
+        )
+    return json.loads(metrics_path.read_text())
+
+
+def load_beans_ablation() -> dict[str, object]:
+    metrics_path = DATA_DIR / "beans_ablation" / "metrics.json"
+    if not metrics_path.exists():
+        raise FileNotFoundError(
+            f"missing ablation metrics at {metrics_path}; run scripts/run_beans_ablation.py first"
+        )
+    return json.loads(metrics_path.read_text())
+
+
+def write_benchmark_table(metrics: dict[str, object]) -> None:
+    beans = metrics["real_benchmark"]
+    cifar = metrics["second_benchmark"]
     table = rf"""
 \begin{{table}}[t]
 \centering
-\caption{{Current progress results. The main benchmark uses the real Beans leaf-disease dataset plus a low-light corruption protocol; parser and deployment metrics come from the implemented repository.}}
+\caption{{Real benchmark summary across two datasets. Both comparisons keep the backbone fixed and change only the prompt-activated augmentation recipe.}}
 \label{{tab:progress_results}}
 \resizebox{{\columnwidth}}{{!}}{{%
-\begin{{tabular}}{{lcc}}
+\begin{{tabular}}{{llccc}}
 \toprule
-\textbf{{Metric}} & \textbf{{Value}} & \textbf{{Notes}} \\
+\textbf{{Dataset}} & \textbf{{Split}} & \textbf{{Fixed}} & \textbf{{Guided}} & \textbf{{$\Delta$}} \\
 \midrule
-Beans clean acc. (fixed) & {real_benchmark['fixed_recipe']['clean_accuracy'] * 100:.1f}\% & MobileNetV3-Small, official test \\
-Beans clean acc. (guided) & {real_benchmark['language_guided']['clean_accuracy'] * 100:.1f}\% & low-light aug. train recipe \\
-Beans low-light acc. (fixed) & {real_benchmark['fixed_recipe']['low_light_accuracy'] * 100:.1f}\% & corrupted test split \\
-Beans low-light acc. (guided) & {real_benchmark['language_guided']['low_light_accuracy'] * 100:.1f}\% & prompt-activated aug. \\
-Low-light gain & +{real_benchmark['low_light_gain_pp']:.1f} pp & same backbone, same data \\
-Task / label parsing & {parser['task_accuracy'] * 100:.1f} / {parser['label_accuracy'] * 100:.1f}\% & {parser['num_prompts']} prompt rubric \\
-Label resolution accuracy & {resolver['accuracy'] * 100:.1f}\% & {resolver['num_cases']} synonym pairs \\
-Classification latency & {models['classification']['latency_ms']:.1f} ms & MobileNetV3-Small, CPU \\
-Detection latency & {models['detection']['latency_ms']:.1f} ms & SSDLite320, CPU \\
-ONNX export success & {models['export_success'] * 100:.0f}\% & 2/2 smoke runs \\
+Beans & clean & {beans['fixed_recipe']['clean_accuracy'] * 100:.1f}\% & {beans['language_guided']['clean_accuracy'] * 100:.1f}\% & {((beans['language_guided']['clean_accuracy'] - beans['fixed_recipe']['clean_accuracy']) * 100):+.1f} \\
+Beans & low-light & {beans['fixed_recipe']['low_light_accuracy'] * 100:.1f}\% & {beans['language_guided']['low_light_accuracy'] * 100:.1f}\% & {beans['low_light_gain_pp']:+.1f} \\
+CIFAR-10 & clean & {cifar['fixed_recipe']['clean_accuracy'] * 100:.1f}\% & {cifar['language_guided']['clean_accuracy'] * 100:.1f}\% & {((cifar['language_guided']['clean_accuracy'] - cifar['fixed_recipe']['clean_accuracy']) * 100):+.1f} \\
+CIFAR-10 & blur & {cifar['fixed_recipe']['blur_accuracy'] * 100:.1f}\% & {cifar['language_guided']['blur_accuracy'] * 100:.1f}\% & {cifar['blur_gain_pp']:+.1f} \\
 \bottomrule
 \end{{tabular}}%
 }}
 \end{{table}}
 """.strip()
     (LATEX_TABLES / "progress_results.tex").write_text(table + "\n")
+
+
+def write_ablation_table(metrics: dict[str, object]) -> None:
+    rows = metrics["ablation"]["results"]
+    pretty_name = {
+        "fixed_mobilenet_pretrained": "Fixed MNV3-S",
+        "guided_mobilenet_pretrained": "Guided MNV3-S",
+        "guided_mobilenet_scratch": "Guided MNV3-S",
+        "guided_efficientnet_pretrained": "Guided EffNet-B0",
+    }
+    pretty_init = {
+        "fixed_mobilenet_pretrained": "ImageNet",
+        "guided_mobilenet_pretrained": "ImageNet",
+        "guided_mobilenet_scratch": "scratch",
+        "guided_efficientnet_pretrained": "ImageNet",
+    }
+    lines = []
+    for row in rows:
+        name = pretty_name.get(row["name"], row["name"])
+        init = pretty_init.get(row["name"], "ImageNet" if row["pretrained"] else "scratch")
+        lines.append(
+            rf"{name} & {init} & {row['clean_accuracy'] * 100:.1f}\% & {row['low_light_accuracy'] * 100:.1f}\% \\"
+        )
+    table = "\n".join(
+        [
+            r"\begin{table}[t]",
+            r"\centering",
+            r"\caption{Beans ablation under the same training budget.}",
+            r"\label{tab:ablation_results}",
+            r"\resizebox{\columnwidth}{!}{%",
+            r"\begin{tabular}{lccc}",
+            r"\toprule",
+            r"\textbf{Config} & \textbf{Init} & \textbf{Clean} & \textbf{Low-light} \\",
+            r"\midrule",
+            *lines,
+            r"\bottomrule",
+            r"\end{tabular}%",
+            r"}",
+            r"\end{table}",
+        ]
+    )
+    (LATEX_TABLES / "ablation_results.tex").write_text(table + "\n")
 
 
 def _denormalize(image_tensor: torch.Tensor) -> np.ndarray:
@@ -564,9 +613,12 @@ def main() -> None:
         "label_resolution": evaluate_label_resolution(),
         "models": benchmark_models(),
         "real_benchmark": load_beans_benchmark(),
+        "second_benchmark": load_cifar_benchmark(),
+        "ablation": load_beans_ablation(),
     }
     (DATA_DIR / "progress_metrics.json").write_text(json.dumps(_json_safe_metrics(metrics), indent=2))
-    write_metrics_table(metrics)
+    write_benchmark_table(metrics)
+    write_ablation_table(metrics)
     build_results_figure(metrics)
     print(json.dumps(_json_safe_metrics(metrics), indent=2))
 
