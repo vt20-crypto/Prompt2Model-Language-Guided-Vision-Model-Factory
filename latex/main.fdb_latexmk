@@ -1,13 +1,14 @@
 # Fdb version 4
-["bibtex main"] 1775165718.93835 "main.aux" "main.bbl" "main" 1775165719.74319 0
+["bibtex main"] 1775178688.61549 "main.aux" "main.bbl" "main" 1775178811.40675 0
   "./ieeenat_fullname.bst" 1775082375.43839 26900 a296cb1ebee73f7bfa143751dc4e1dfd ""
   "./main.bib" 1775082705.13963 1827 94bf05049cd6ca8724b3e044099e859c ""
-  "main.aux" 1775165719.56557 3148 17f3b55827730087cd86b3eafee8f335 "pdflatex"
+  "main.aux" 1775178811.1145 2961 dbf1c0c042324374dd1d0537e8a406e5 "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1775165719.01795 "main.tex" "main.pdf" "main" 1775165719.7433 0
+["pdflatex"] 1775178810.15189 "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/latex/main.tex" "main.pdf" "main" 1775178811.40694 0
+  "/Users/apple/Prompt2Model-Language-Guided-Vision-Model-Factory/latex/main.tex" 1775178809.74074 6926 00acfdf0213e50dc16b49b57c4cd9cc3 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/adobe/courier/pcrr7t.tfm" 1136768653 960 379cc0019370a9e0208a0a3f949f847a ""
@@ -119,6 +120,7 @@
   "/usr/local/texlive/2025/texmf-dist/tex/latex/refcount/refcount.sty" 1576624809 9878 9e94e8fa600d95f9c7731bb21dfb67a4 ""
   "/usr/local/texlive/2025/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty" 1657483315 9714 ba3194bd52c8499b3f1e3eb91d409670 ""
   "/usr/local/texlive/2025/texmf-dist/tex/latex/silence/silence.sty" 1342202217 17540 5aad5dddd881dee43ad1a83adb336af9 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/tools/afterpage.sty" 1717359999 4085 a8942f4e9896fdaec6c24cdd7b28fa66 ""
   "/usr/local/texlive/2025/texmf-dist/tex/latex/tools/xspace.sty" 1717359999 4545 e3f4de576c914e2000f07f69a891c071 ""
   "/usr/local/texlive/2025/texmf-dist/tex/latex/url/url.sty" 1388531844 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "/usr/local/texlive/2025/texmf-dist/tex/latex/xcolor/xcolor.sty" 1727642399 55384 b454dec21c2d9f45ec0b793f0995b992 ""
@@ -127,13 +129,12 @@
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1741450574 3345740 46b66fdb0378f7bf5921b5eabf1762b8 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
   "cvpr.sty" 1775082375.38032 17969 3445318c9c9e09b8ef62b6aaa240cbba ""
-  "figures/pipeline_architecture.pdf" 1775165636.05745 24433 7101d8277f4e5f293dbfac39cbc97922 ""
   "figures/progress_results.pdf" 1775105326.51069 66245 687fdff5572cff42663a3f21d10f768e ""
-  "main.aux" 1775165719.56557 3148 17f3b55827730087cd86b3eafee8f335 "pdflatex"
-  "main.bbl" 1775165719.01608 1571 0ed44966971a8550e17eeec2cb39e23e "bibtex main"
-  "main.tex" 1775165714.72192 6177 9b435f229173ebbaafd1462223b4d36a ""
-  "tables/ablation_results.tex" 1775105325.95726 483 08f8f77a5e40f70ac6d516afae1b70fc ""
-  "tables/progress_results.tex" 1775105325.95709 593 e72c6ebca0e1fcc42b4989d91edc1e33 ""
+  "main.aux" 1775178811.1145 2961 dbf1c0c042324374dd1d0537e8a406e5 "pdflatex"
+  "main.bbl" 1775178688.80024 1571 0ed44966971a8550e17eeec2cb39e23e "bibtex main"
+  "main.tex" 1775178809.74074 6926 00acfdf0213e50dc16b49b57c4cd9cc3 ""
+  "tables/ablation_results.tex" 1775178591.52146 483 08f8f77a5e40f70ac6d516afae1b70fc ""
+  "tables/progress_results.tex" 1775178591.52123 593 e72c6ebca0e1fcc42b4989d91edc1e33 ""
   (generated)
   "main.aux"
   "main.log"

@@ -9,6 +9,7 @@
 \usepackage{booktabs}
 \usepackage{microtype}
 \usepackage{enumitem}
+\usepackage{afterpage}
 
 \usepackage[breaklinks=true,bookmarks=false]{hyperref}
 
@@ -32,6 +33,7 @@ Madhuvani Thatiparti (mt180)
 \begin{abstract}
 Prompt2Model turns a free-form request into a runnable vision pipeline. The current prototype covers typed prompt parsing, label resolution, augmentation selection, lightweight model choice for classification and COCO-style detection, smoke-test training, and ONNX export. On a 12-prompt rubric, task and label extraction are 91.7\% exact-match, while priority and environment tags are 100\%; the label resolver is 100\% on an 8-case synonym check. For real-data evaluation, we downloaded Beans and CIFAR-10. On Beans, the prompt-guided low-light recipe improves corrupted-test accuracy from 44.5\% to 62.5\%; on CIFAR-10, the prompt-guided motion-blur recipe improves blur accuracy from 38.7\% to 66.5\%. A Beans ablation also shows that pretrained initialization matters and that EfficientNet-B0 outperforms MobileNetV3-Small under the same recipe.
 \end{abstract}
+\suppressfloats[t]
 
 \section{Introduction}
 Building a vision model still involves many small engineering choices: task type, class names, augmentation, backbone, and export settings. Prompt2Model uses the prompt as the interface for those choices. In the current system, phrases such as ``prioritize speed'', ``low light'', or ``motion blur'' are translated into an explicit training recipe.
@@ -41,7 +43,7 @@ This report captures the week-4 integrated prototype plus real-data extensions. 
 \section{Method}
 The pipeline has three pieces. \textbf{Parsing:} a typed schema stores task type, requested labels, deployment constraints, and environment tags, and a deterministic parser fills that schema from prompt text. \textbf{Label grounding and model choice:} requested labels are matched to dataset classes with a lexical resolver today, while the CLIP path is already wired for later use~\cite{radford2021clip}; the parsed priority signal selects lightweight backbones, currently MobileNetV3 for classification~\cite{howard2019searching} and SSDLite320-MobileNetV3 for detection~\cite{liu2016ssd,howard2019searching}. \textbf{Training and export:} the system loads ImageFolder-like classification data or COCO-style detection annotations, trains a model, evaluates it, and exports an ONNX artifact with embedded metadata. In the current implementation, ``prioritize speed'' selects MobileNetV3-Small, ``low light'' enables brightness/contrast plus blur, and ``motion blur'' enables blur augmentation during training.
 
-\begin{figure*}[t]
+\begin{figure*}[h]
 \centering
 \includegraphics[width=\textwidth]{figures/progress_results.pdf}
 \caption{Beans robustness results from the implemented prototype. Left: fixed-recipe failures corrected by the guided recipe. Right: clean and corrupted test accuracy.}
@@ -54,19 +56,17 @@ To verify integration, we combine repository-level checks with two real-data ben
 \section{Preliminary Results}
 Figure~\ref{fig:qualitative} shows the Beans benchmark. The main result is a clear robustness tradeoff: the prompt-guided low-light recipe improves corrupted-test accuracy from 44.5\% to 62.5\%, a gain of 18.0 points, while clean accuracy changes from 94.5\% to 90.6\%. The second benchmark shows the same pattern on CIFAR-10: the motion-blur recipe improves blur accuracy from 38.7\% to 66.5\% with almost no clean penalty (78.5\% to 79.0\%). Table~\ref{tab:progress_results} summarizes both benchmarks.
 
-\input{tables/progress_results}
-\input{tables/ablation_results}
-
 Table~\ref{tab:ablation_results} shows the Beans ablation. Pretrained initialization matters: the guided MobileNetV3-Small model trained from scratch collapses to 33.6\% on both clean and low-light evaluation. Backbone choice also matters after parsing: guided EfficientNet-B0 reaches 95.3\% clean and 66.4\% low-light accuracy, improving on guided MobileNetV3-Small. The parser and deployment stack are stable enough for these experiments: task and label extraction are both 91.7\% exact-match, label resolution is 100\% on 8 curated synonym cases, both smoke pipelines export to ONNX successfully, and CPU latency is 10.2\,ms for MobileNetV3-Small and 28.7\,ms for SSDLite320.
 
 \section{Pipeline Architecture}
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.88\columnwidth]{figures/pipeline_architecture.pdf}
-\caption{Implemented Prompt2Model handoff chain.}
-\label{fig:architecture}
-\end{figure}
-Figure~\ref{fig:architecture} makes the system boundary explicit. The key claim is not only that prompts select augmentations, but that they control a full path from typed configuration to exported artifact. In the repo, those handoffs appear as \texttt{pipeline\_config.json}, \texttt{best\_model.pt}, \texttt{evaluation\_report.md}, and \texttt{model.onnx}. The main missing piece is still real detection evaluation.
+The implemented system still exposes a full handoff path even without a dedicated figure. The prompt is first converted into a typed configuration with task type, requested labels, deployment constraints, and environment tags. That configuration then drives label grounding, augmentation selection, and backbone choice before training writes checkpoints and metrics. The final deployment path writes \texttt{pipeline\_config.json}, \texttt{best\_model.pt}, \texttt{evaluation\_report.md}, and \texttt{model.onnx}. The main missing piece is still real detection evaluation.
+\afterpage{%
+\input{tables/progress_results}
+\input{tables/ablation_results}
+}
+
+\section{Discussion and Next Steps}
+The report now shows that the project is beyond the proposal stage: the codebase runs end to end, and the results section includes real images rather than only synthetic smoke data. The remaining limitations are still clear. The parser still misses some exact task or label cases, the label benchmark still leans on lexical fallback rather than the full CLIP path, the real-data evaluation is still classification-heavy, and the detection path is validated more by export and smoke tests than by real benchmarks. The next stage is to strengthen label grounding, add budget-aware search and early stopping, run real COCO-style detection experiments, and compare against stronger fixed baselines.
 
 {\tiny
 \setlength{\bibsep}{0pt}
