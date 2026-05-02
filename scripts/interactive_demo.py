@@ -75,56 +75,34 @@ def main():
     else:
         success("Augmentation Strategy: STANDARD_ONLY")
 
-    step("Resolving Dataset Labels...")
+    step("Generating Training Requirements...")
+    time.sleep(1)
+    
+    CYAN = "\033[36m"
     labels = [l.name for l in config.labels]
-    typing_print(f"Mapping {labels} to internal datasets...", 0.02)
-    time.sleep(0.5)
-    success("Labels resolved with 98.4% confidence.")
-
-    step("Starting Ray Tune HPO (Hyperparameter Optimization)...")
-    time.sleep(1)
-    print(f"{BLUE}[Trial 1]{RESET} lr=1e-3, batch=16 | Accuracy: 0.92")
-    time.sleep(1)
-    print(f"{BLUE}[Trial 2]{RESET} lr=5e-4, batch=32 | Accuracy: 0.95 {BOLD}{GREEN}(Winner){RESET}")
-    time.sleep(0.5)
-    success("Best model checkpointed.")
-
-    step("Exporting to Metadata-Embedded ONNX...")
-    typing_print("Injecting Task, LabelMap, Mean/Std, and InputResolution into model.onnx...", 0.01)
-    time.sleep(0.5)
-    success("ONNX Export Complete (data/output/model.onnx)")
-
-    header("AUTONOMOUS EDGE INFERENCE DEMO")
     
-    step("Executing edge_infer.py (No external config required)")
-    print(f"{BOLD}{GREEN}Loading model.onnx...{RESET}")
-    time.sleep(0.5)
-    print(f"✓ Task: {config.task.value}")
-    print(f"✓ Classes: {labels}")
-    print(f"✓ Target Resolution: 160x160")
-    
-    step("Running Inference on sample_image.jpg")
-    time.sleep(0.8)
-    
-    # Dynamic Latency based on model
-    if "ssd" in model_name or "yolo" in model_name:
-        latency, fps = "5.42 ms", "184.5"
-    elif "efficient" in model_name or "mobile" in model_name:
-        latency, fps = "2.14 ms", "467.2"
+    req_format = "COCO Detection Format (.json)" if config.task.value == "detection" else "ImageFolder Format (Class-named subdirectories)"
+    print(f"\n{BOLD}{YELLOW}To physically train this {config.task.value.upper()} model, you must provide:{RESET}")
+    print(f"1. A dataset formatted in {BOLD}{GREEN}{req_format}{RESET}.")
+    if config.task.value == "detection":
+        print(f"2. Bounding box annotations for the following requested labels: {BOLD}{GREEN}{labels}{RESET}")
     else:
-        latency, fps = "24.5 ms", "40.8"
-        
-    print(f"{BOLD}Latency: {latency} | FPS: {fps}{RESET}")
-    
-    print(f"\n{BOLD}{config.task.value.upper()} RESULTS:{RESET}")
-    for i, label in enumerate(labels, start=1):
-        if config.task.value == "detection":
-            print(f"{i}. {label:<10} | Score: 0.98 | Box: (142, 55, 201, 110)")
-        else:
-            print(f"{i}. {label:<10} | Score: 0.98")
+        print(f"2. Folders named exactly after the requested classes: {BOLD}{GREEN}{labels}{RESET}")
+    print(f"3. A machine with at least 1 GPU (or a strong CPU) to execute the Ray Tune HPO.")
 
-    header("PROJECT FINALIZED")
-    typing_print(f"{BOLD}{GREEN}Evaluation Report and Telemetry History saved to disk.{RESET}", 0.04)
+    header("HOW TO EXECUTE")
+    
+    print(f"{BOLD}Run the following command in your terminal to begin the actual training pipeline:{RESET}\n")
+    
+    cmd = (f"python -m prompt2model.cli run \\\n"
+           f"    --prompt \"{user_prompt}\" \\\n"
+           f"    --dataset-root \"/path/to/your/dataset\" \\\n"
+           f"    --dataset-format \"{'coco' if config.task.value == 'detection' else 'imagefolder'}\" \\\n"
+           f"    --enable-hpo")
+    
+    print(f"{CYAN}{cmd}{RESET}\n")
+    
+    typing_print(f"{BOLD}{GREEN}Once training completes, the model will be exported to 'output/model.onnx' for autonomous edge inference!{RESET}", 0.04)
     print("\n")
 
 if __name__ == "__main__":
