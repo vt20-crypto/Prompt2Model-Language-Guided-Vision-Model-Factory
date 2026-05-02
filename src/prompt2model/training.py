@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +10,7 @@ from typing import Any
 import torch
 from torch import nn
 
-from prompt2model.config import TaskType, TrainingConfig
+from prompt2model.config import DatasetConfig, TaskType, TrainingConfig
 
 
 @dataclass
@@ -47,7 +48,15 @@ def train_classification_model(
     config: TrainingConfig,
     output_dir: str | Path,
     device: torch.device,
+    trial: Any = None,
 ) -> TrainingArtifacts:
+    """Train a classification model.
+
+    Args:
+        trial: Optional ``optuna.Trial`` for pruning during HPO. When provided,
+            validation accuracy is reported each epoch and unpromising trials
+            are pruned early.
+    """
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
@@ -111,6 +120,16 @@ def train_classification_model(
             best_metric = val_accuracy
             best_state = copy.deepcopy(model.state_dict())
 
+        # Optuna integration: report intermediate value and check for pruning
+        if trial is not None:
+            try:
+                import optuna
+                trial.report(val_accuracy, epoch)
+                if trial.should_prune():
+                    raise optuna.exceptions.TrialPruned()
+            except ImportError:
+                pass
+
     model.load_state_dict(best_state)
     checkpoint_path = Path(output_dir) / "best_model.pt"
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,7 +149,13 @@ def train_detection_model(
     config: TrainingConfig,
     output_dir: str | Path,
     device: torch.device,
+    trial: Any = None,
 ) -> TrainingArtifacts:
+    """Train a torchvision-style detection model.
+
+    Args:
+        trial: Optional ``optuna.Trial`` for pruning during HPO.
+    """
     model = model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
     history: list[dict[str, float]] = []
@@ -179,10 +204,152 @@ def train_detection_model(
             best_metric = mean_val_loss
             best_state = copy.deepcopy(model.state_dict())
 
+        # Optuna integration: report intermediate value and check for pruning
+        if trial is not None:
+            try:
+                import optuna
+                trial.report(-mean_val_loss, epoch)  # negate so higher = better
+                if trial.should_prune():
+                    raise optuna.exceptions.TrialPruned()
+            except ImportError:
+                pass
+
     model.load_state_dict(best_state)
     checkpoint_path = Path(output_dir) / "best_detection_model.pt"
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), checkpoint_path)
+    return TrainingArtifacts(
+        checkpoint_path=str(checkpoint_path),
+        history=history,
+        best_metric=best_metric,
+        device=str(device),
+    )
+
+
+def train_yolo_model(
+    model_name: str,
+    dataset_config: DatasetConfig,
+    training_config: TrainingConfig,
+    output_dir: str | Path,
+    device: torch.device,
+) -> TrainingArtifacts:
+    """Train a YOLO or RT-DETR model using the ultralytics native training API.
+
+    Converts our COCO-format DatasetConfig into the YAML format ultralytics
+    expects, runs training, and returns TrainingArtifacts compatible with the
+    rest of the pipeline.
+    """
+    import shutil
+    import tempfile
+
+    from prompt2model.models import _ULTRALYTICS_WEIGHTS, build_yolo_model
+
+    try:
+        import yaml
+    except ImportError:
+        import subprocess
+        subprocess.run(["pip", "install", "pyyaml"], check=True)
+        import yaml
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load COCO annotations to extract class info
+    annotation_path = Path(dataset_config.annotation_path or "")
+    coco_data = json.loads(annotation_path.read_text())
+    categories = sorted(coco_data["categories"], key=lambda c: c["id"])
+    class_names = [c["name"] for c in categories]
+    num_classes = len(class_names)
+
+    # Split image IDs for train / val
+    import math
+    import random as _random
+    image_ids = [item["id"] for item in coco_data["images"]]
+    rng = _random.Random(dataset_config.seed)
+    rng.shuffle(image_ids)
+    total = len(image_ids)
+    val_count = max(1, math.floor(total * dataset_config.val_split))
+    val_ids = set(image_ids[:val_count])
+    train_ids = set(image_ids[val_count:])
+
+    # Build split-specific annotation dicts
+    train_anns = [a for a in coco_data["annotations"] if a["image_id"] in train_ids]
+    val_anns = [a for a in coco_data["annotations"] if a["image_id"] in val_ids]
+    train_imgs = [i for i in coco_data["images"] if i["id"] in train_ids]
+    val_imgs = [i for i in coco_data["images"] if i["id"] in val_ids]
+
+    # Write temp COCO JSON files
+    tmp_dir = output_dir / "_yolo_data_tmp"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    train_json = tmp_dir / "train.json"
+    val_json = tmp_dir / "val.json"
+    train_json.write_text(json.dumps({
+        "images": train_imgs, "annotations": train_anns, "categories": coco_data["categories"]
+    }))
+    val_json.write_text(json.dumps({
+        "images": val_imgs, "annotations": val_anns, "categories": coco_data["categories"]
+    }))
+
+    # Write YOLO data YAML (COCO JSON format)
+    data_yaml_path = tmp_dir / "data.yaml"
+    data_yaml = {
+        "path": str(Path(dataset_config.root).resolve()),
+        "train": str(train_json.resolve()),
+        "val": str(val_json.resolve()),
+        "nc": num_classes,
+        "names": class_names,
+    }
+    data_yaml_path.write_text(yaml.dump(data_yaml))
+
+    # Build and train the YOLO model
+    yolo = build_yolo_model(model_name)
+    device_str = "mps" if device.type == "mps" else str(device)
+    yolo.train(
+        data=str(data_yaml_path),
+        epochs=training_config.epochs,
+        batch=training_config.batch_size,
+        lr0=training_config.learning_rate,
+        weight_decay=training_config.weight_decay,
+        imgsz=dataset_config.image_size,
+        project=str(output_dir),
+        name="yolo_run",
+        device=device_str,
+        verbose=False,
+        exist_ok=True,
+    )
+
+    # Locate best checkpoint written by ultralytics
+    best_pt = output_dir / "yolo_run" / "weights" / "best.pt"
+    checkpoint_path = output_dir / "best_detection_model.pt"
+    if best_pt.exists():
+        shutil.copy(best_pt, checkpoint_path)
+    else:
+        # Fallback to last.pt
+        last_pt = output_dir / "yolo_run" / "weights" / "last.pt"
+        if last_pt.exists():
+            shutil.copy(last_pt, checkpoint_path)
+
+    # Load training results CSV if available
+    results_csv = output_dir / "yolo_run" / "results.csv"
+    history: list[dict[str, float]] = []
+    best_metric = 0.0
+    if results_csv.exists():
+        import csv
+        with results_csv.open() as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    epoch_val = float(row.get("epoch", 0))
+                    map50 = float(row.get("metrics/mAP50(B)", 0) or 0)
+                    history.append({"epoch": epoch_val + 1, "val_map50": map50})
+                    if map50 > best_metric:
+                        best_metric = map50
+                except (ValueError, TypeError):
+                    continue
+
+    # Clean up temp files
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+
     return TrainingArtifacts(
         checkpoint_path=str(checkpoint_path),
         history=history,
@@ -234,4 +401,3 @@ def benchmark_model(model: nn.Module, sample_input: Any, device: torch.device, r
         "parameter_count": float(parameter_count),
         "parameter_count_millions": float(parameter_count) / 1_000_000.0,
     }
-

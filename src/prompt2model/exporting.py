@@ -117,6 +117,7 @@ def export_model_to_onnx(
         output_names=output_names,
         dynamic_axes={"images": {0: "batch"}},
         opset_version=opset,
+        dynamo=False,
     )
     inject_metadata(output_path, metadata)
     return output_path
