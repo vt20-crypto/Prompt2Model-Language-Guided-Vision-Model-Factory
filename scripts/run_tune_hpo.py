@@ -28,7 +28,8 @@ def main():
     num_classes = len(class_names)
 
     # Simplified loader construction for demo
-    from prompt2model.data import BeansDataset  # Assuming it's in scripts/run_beans_benchmark.py or similar
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from run_beans_real_benchmark import BeansDataset
     # For the sake of this demo script being standalone, we'll use a generic approach if possible
     # but since BeansDataset is specifically defined in Venkata's scripts, we'll mock a simple one
     
