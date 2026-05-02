@@ -164,7 +164,7 @@ def run_hpo(
             num_samples=num_samples,
         ),
         param_space=search_space,
-        run_config=ray.train.RunConfig(
+        run_config=tune.RunConfig(
             storage_path=str(storage_path) if storage_path else None,
         ),
     )
