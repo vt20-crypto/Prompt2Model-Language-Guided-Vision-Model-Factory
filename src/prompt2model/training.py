@@ -361,22 +361,43 @@ def train_yolo_model(
 def benchmark_model(model: nn.Module, sample_input: Any, device: torch.device, repeats: int = 5) -> dict[str, float]:
     model = model.to(device)
     model.eval()
+    
+    # 1. Theoretical FLOPs calculation (using fvcore)
+    flops = 0.0
+    try:
+        from fvcore.nn import FlopCountAnalysis
+        # FlopCountAnalysis expects a specific input format
+        # If sample_input is a list (detection), we pass it as is
+        # If it's a tensor (classification), we wrap it if needed but fvcore usually handles it
+        analysis = FlopCountAnalysis(model, sample_input)
+        analysis.unsupported_ops_warnings(False)
+        flops = float(analysis.total())
+    except Exception:
+        # Fallback if fvcore is missing or fails
+        flops = 0.0
+
+    # 2. Latency and FPS
     elapsed = []
     with torch.no_grad():
         for _ in range(repeats):
             start = time.perf_counter()
             if isinstance(sample_input, list):
+                # For detection, sample_input is a list of images
                 _ = model([item.to(device) for item in sample_input])
             else:
                 _ = model(sample_input.to(device))
             if device.type == "cuda":
                 torch.cuda.synchronize()
             elapsed.append(time.perf_counter() - start)
+    
     avg_seconds = sum(elapsed) / max(len(elapsed), 1)
     parameter_count = sum(param.numel() for param in model.parameters())
+    
     return {
         "latency_ms": avg_seconds * 1000.0,
         "fps": 1.0 / avg_seconds if avg_seconds > 0 else 0.0,
+        "flops": flops,
+        "gflops": flops / 1_000_000_000.0,
         "parameter_count": float(parameter_count),
         "parameter_count_millions": float(parameter_count) / 1_000_000.0,
     }

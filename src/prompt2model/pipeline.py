@@ -13,7 +13,7 @@ from prompt2model.data import (
     load_dataset_labels,
 )
 from prompt2model.evaluation import run_classification_inference, run_detection_inference
-from prompt2model.exporting import export_model_to_onnx, verify_onnx
+from prompt2model.exporting import build_metadata_props, export_model_to_onnx, verify_onnx
 from prompt2model.label_resolution import LabelResolver
 from prompt2model.models import (
     build_classification_model,
@@ -32,6 +32,7 @@ from prompt2model.training import (
     train_detection_model,
     train_yolo_model,
 )
+from prompt2model.telemetry import TelemetryLogger
 
 
 @dataclass
@@ -49,6 +50,9 @@ class PipelineResult:
 class Prompt2ModelFactory:
     def __init__(self, label_resolver: LabelResolver | None = None) -> None:
         self.label_resolver = label_resolver or LabelResolver()
+        self.telemetry = TelemetryLogger(
+            global_csv_path=Path(__file__).resolve().parents[2] / "data" / "telemetry_history.csv"
+        )
 
     def build_config(
         self,
@@ -220,6 +224,7 @@ class Prompt2ModelFactory:
             if hpo_info:
                 metadata["hpo_trials"] = hpo_info.get("n_trials_completed", 0)
                 metadata["hpo_budget_minutes"] = hpo_info.get("budget_minutes", 0)
+            metadata = build_metadata_props(config, bundle.class_names)
             try:
                 if config.task == TaskType.CLASSIFICATION:
                     sample_batch, _ = next(iter(bundle.test_loader))
@@ -250,6 +255,10 @@ class Prompt2ModelFactory:
             training_history=training.history,
             export_path=onnx_path,
         )
+        
+        # Log telemetry
+        self.telemetry.log_run(config, metrics, run_dir)
+        
         return PipelineResult(
             run_dir=str(run_dir),
             config_path=str(config_path),
