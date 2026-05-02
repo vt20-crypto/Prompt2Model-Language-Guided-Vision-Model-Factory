@@ -118,7 +118,7 @@ def _trainable_function(
     })
     
     if HAS_RAY:
-        ray.train.report(final_metrics)
+        tune.report(final_metrics)
 
 
 def run_hpo(
